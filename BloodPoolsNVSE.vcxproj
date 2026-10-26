@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<PropertyGroup><PreferredToolArchitecture>x64</PreferredToolArchitecture></PropertyGroup>
+<ItemGroup Label="ProjectConfigurations"><ProjectConfiguration Include="Release|Win32"><Configuration>Release</Configuration><Platform>Win32</Platform></ProjectConfiguration></ItemGroup>
+<PropertyGroup Label="Globals"><ProjectGuid>{3C1E4B6A-9D2F-4F0B-8A7E-5B6C2D1E0F93}</ProjectGuid><Keyword>Win32Proj</Keyword><WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion><ProjectName>BloodPoolsNVSE</ProjectName></PropertyGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+<PropertyGroup Label="Configuration"><ConfigurationType>DynamicLibrary</ConfigurationType><PlatformToolset>v143</PlatformToolset><WholeProgramOptimization>true</WholeProgramOptimization><CharacterSet>MultiByte</CharacterSet></PropertyGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+<PropertyGroup><OutDir>$(ProjectDir)Release\</OutDir><IntDir>$(ProjectDir)Release\obj\</IntDir><TargetName>BloodPoolsNVSE</TargetName><LinkIncremental>false</LinkIncremental></PropertyGroup>
+<ItemDefinitionGroup>
+<ClCompile><LanguageStandard>stdcpp17</LanguageStandard><Optimization>MinSpace</Optimization><FavorSizeOrSpeed>Size</FavorSizeOrSpeed><RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary><DebugInformationFormat>ProgramDatabase</DebugInformationFormat><PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;NOMINMAX;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions><FunctionLevelLinking>true</FunctionLevelLinking><IntrinsicFunctions>true</IntrinsicFunctions><PrecompiledHeader>NotUsing</PrecompiledHeader><MultiProcessorCompilation>true</MultiProcessorCompilation><WarningLevel>Level4</WarningLevel><SDLCheck>true</SDLCheck></ClCompile>
+<Link><ModuleDefinitionFile>exports.def</ModuleDefinitionFile><GenerateDebugInformation>true</GenerateDebugInformation><SubSystem>Windows</SubSystem><TargetMachine>MachineX86</TargetMachine><OptimizeReferences>true</OptimizeReferences><EnableCOMDATFolding>true</EnableCOMDATFolding><AdditionalDependencies>kernel32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+<PostBuildEvent><Command>if "$(PoolsModDir)"=="" exit /b 0
+if not exist "$(PoolsModDir)\NVSE\Plugins" mkdir "$(PoolsModDir)\NVSE\Plugins"
+if not exist "$(PoolsModDir)\config" mkdir "$(PoolsModDir)\config"
+copy /Y "$(TargetPath)" "$(PoolsModDir)\NVSE\Plugins\BloodPoolsNVSE.dll"
+if errorlevel 1 exit /b 1
+copy /Y "$(TargetDir)$(TargetName).pdb" "$(PoolsModDir)\NVSE\Plugins\BloodPoolsNVSE.pdb"
+if errorlevel 1 exit /b 1
+if not exist "$(PoolsModDir)\config\BloodPoolsNVSE.ini" copy /Y "$(ProjectDir)mod\config\BloodPoolsNVSE.ini" "$(PoolsModDir)\config\BloodPoolsNVSE.ini"
+copy /Y "$(ProjectDir)LICENCE" "$(PoolsModDir)\LICENCE"
+if errorlevel 1 exit /b 1
+if exist "$(PoolsModDir)\BloodPools.esp" del /Q "$(PoolsModDir)\BloodPools.esp"
+if errorlevel 1 exit /b 1
+xcopy /Y /I /Q "$(ProjectDir)mod\meshes\BloodPools" "$(PoolsModDir)\meshes\BloodPools"
+xcopy /Y /I /Q "$(ProjectDir)mod\textures\BloodPools" "$(PoolsModDir)\textures\BloodPools"</Command></PostBuildEvent>
+</ItemDefinitionGroup>
+<ItemGroup>
+<ClCompile Include="src\Body.cpp" />
+<ClCompile Include="src\Config.cpp" />
+<ClCompile Include="src\Decals.cpp" />
+<ClCompile Include="src\Kills.cpp" />
+<ClCompile Include="src\Main.cpp" />
+<ClCompile Include="src\PoolMesh.cpp" />
+<ClCompile Include="src\Pools.cpp" />
+<ClCompile Include="src\Rig.cpp" />
+<ClCompile Include="src\Wounds.cpp" />
+</ItemGroup>
+<ItemGroup>
+<ClInclude Include="src\Body.h" />
+<ClInclude Include="src\Config.h" />
+<ClInclude Include="src\Decals.h" />
+<ClInclude Include="src\Engine.h" />
+<ClInclude Include="src\Hooks.h" />
+<ClInclude Include="src\Kills.h" />
+<ClInclude Include="src\PluginAPI.h" />
+<ClInclude Include="src\PoolMesh.h" />
+<ClInclude Include="src\Pools.h" />
+<ClInclude Include="src\Rig.h" />
+<ClInclude Include="src\Wounds.h" />
+</ItemGroup>
+<ItemGroup><None Include="exports.def" /><None Include="mod\config\BloodPoolsNVSE.ini" /><None Include="LICENCE" /><None Include="tests\RigTest.cpp" /></ItemGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="StageMod" BeforeTargets="PostBuildEvent" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <MakeDir Directories="$(ProjectDir)mod\NVSE\Plugins" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ProjectDir)mod\NVSE\Plugins" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)LICENCE" DestinationFolder="$(ProjectDir)mod" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

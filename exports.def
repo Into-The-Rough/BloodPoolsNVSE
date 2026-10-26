@@ -1,0 +1,4 @@
+LIBRARY BloodPoolsNVSE
+EXPORTS
+    NVSEPlugin_Query
+    NVSEPlugin_Load
