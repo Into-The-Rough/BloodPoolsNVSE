@@ -6,6 +6,14 @@ namespace Pools::Decals {
 	using namespace Engine;
 	constexpr float kAbove = 24, kReach = 240;
 	static int s_castsLeft = 0;
+	static PickStats s_pickStats;
+
+	PickStats TakePickStats()
+	{
+		PickStats stats = s_pickStats;
+		s_pickStats = {};
+		return stats;
+	}
 
 	void BeginFrame(int casts) { s_castsLeft = casts; }
 
@@ -54,6 +62,7 @@ namespace Pools::Decals {
 			for (int k = 0; k < 8; ++k) PickShapeKeys(pick)[k] = 0xFFFFFFFF;
 			PickFrom(pick, start);
 			PickTo(pick, end);
+			++s_pickStats.ground;
 			CastPick(pick);
 			//0xc69748 sets this when no cast ran
 			if (PickSkipped(pick)) return Cast::kDeferred;
@@ -102,6 +111,7 @@ namespace Pools::Decals {
 		}
 		ScenePickTarget(s_pick);
 		bool found = false;
+		++s_pickStats.visual;
 		int n = ScenePickCast(s_pick, origin, down) ? ScenePickCount(s_pick) : 0;
 		for (int i = 0; i < n && !found; ++i) {
 			const uint8_t* r = ScenePickRecord(s_pick, i);

@@ -25,6 +25,11 @@ namespace Pools::Decals {
 	};
 
 	constexpr int kGroundCasts = 4;
+	struct PickStats {
+		uint64_t ground = 0, visual = 0;
+	};
+
+	PickStats TakePickStats();
 	void BeginFrame(int casts);
 	int CastsLeft();
 	Cast Ground(uint32_t filter, const Engine::Vec3& from, float reach, Surface& out);

@@ -20,10 +20,69 @@ static Reading Kerb(void*, float x, float, float& z)
 	return Reading::kGround;
 }
 
+struct Surface {
+	int calls = 0;
+	float height = 1;
+	Reading reading = Reading::kGround;
+};
+
+static Reading Sample(void* context, float, float, float& z)
+{
+	auto& surface = *static_cast<Surface*>(context);
+	++surface.calls;
+	z = surface.height;
+	return surface.reading;
+}
+
+static State GrowingVertex()
+{
+	State s;
+	for (int i = 2; i < kVertices; ++i) {
+		s.locked[i] = true;
+		s.radius[i] = 100;
+	}
+	return s;
+}
+
+static void RepeatedProbe(const Point* points)
+{
+	Settings settings;
+	settings.duration = settings.creepSeconds = settings.lobes = 0;
+	Surface surface;
+	State s = GrowingVertex();
+	TakeProbeStats();
+	assert(Step(s, settings, points, .01f, 6, Sample, &surface) == 2);
+	assert(surface.calls == 1 && s.z[1] == 1 && s.probed[1] && !s.locked[1]);
+	auto stats = TakeProbeStats();
+	assert(stats.calls == 1 && stats.reused == 1 && stats.deferred == 0);
+	assert(!Settled(s));
+	surface.height = 2;
+	assert(Step(s, settings, points, .01f, 6, Sample, &surface) == 1);
+	assert(surface.calls == 2 && s.z[1] == 2 && !s.locked[1]);
+	surface.reading = Reading::kNone;
+	assert(Step(s, settings, points, .01f, 6, Sample, &surface) == 1);
+	assert(surface.calls == 3 && s.locked[1]);
+
+	s = GrowingVertex();
+	surface.reading = Reading::kDeferred;
+	assert(Step(s, settings, points, .01f, 6, Sample, &surface) == 0);
+	assert(surface.calls == 4 && !s.probed[1] && !s.locked[1]);
+	surface.reading = Reading::kGround;
+	surface.height = 3;
+	assert(Step(s, settings, points, .01f, 6, Sample, &surface) == 2);
+	assert(surface.calls == 5 && s.z[1] == 3);
+
+	State other = GrowingVertex();
+	surface.height = 4;
+	assert(Step(other, settings, points, .01f, 6, Sample, &surface) == 2);
+	assert(surface.calls == 6 && other.z[1] == 4 && s.z[1] == 3);
+}
+
 int main()
 {
 	Point points[kVertices];
 	Layout(points);
+	RepeatedProbe(points);
 	uint16_t tris[kTriangles * 3];
 	Triangles(tris);
 	for (int i = 0; i < kTriangles * 3; ++i) assert(tris[i] < kVertices);

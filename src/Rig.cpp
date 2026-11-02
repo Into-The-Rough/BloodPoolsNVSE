@@ -3,6 +3,14 @@
 
 namespace Pools::Rig {
 	constexpr float kPi = 3.14159265f;
+	static ProbeStats s_probeStats;
+
+	ProbeStats TakeProbeStats()
+	{
+		ProbeStats stats = s_probeStats;
+		s_probeStats = {};
+		return stats;
+	}
 
 	void Layout(Point* out)
 	{
@@ -157,14 +165,29 @@ namespace Pools::Rig {
 			if (!s.locked[i] && !s.probed[i]) s.z[i] = points[i].parent >= 0 ? s.z[points[i].parent] : 0;
 		if (!probe) return 0;
 		int budget = rays;
+		static_assert(kVertices <= 64);
+		uint64_t sampled = 0;
 		for (int n = 0; n < kVertices && budget > 0; ++n) {
 			int i = 1 + (s.cursor + n) % (kVertices - 1);
 			if (s.locked[i]) continue;
 			bool due = !s.probed[i] || s.capped[i] || s.probedAt[i] - s.radius[i] >= settings.reprobe || (s.progress >= 1 && std::fabs(s.radius[i] - s.probedAt[i]) >= kFinalTolerance);
 			if (!due) continue;
 			float x = points[i].dirX * s.radius[i], y = points[i].dirY * s.radius[i], z = 0;
-			Reading reading = probe(context, x, y, z);
-			if (reading == Reading::kDeferred) break;
+			Reading reading;
+			uint64_t bit = uint64_t{1} << i;
+			//radii and the scene stay fixed during this step
+			if (sampled & bit) {
+				z = s.z[i];
+				reading = Reading::kGround;
+				++s_probeStats.reused;
+			} else {
+				++s_probeStats.calls;
+				reading = probe(context, x, y, z);
+			}
+			if (reading == Reading::kDeferred) {
+				++s_probeStats.deferred;
+				break;
+			}
 			--budget;
 			s.cursor = i;
 			if (reading == Reading::kNone) {
@@ -185,6 +208,7 @@ namespace Pools::Rig {
 			s.z[i] = z;
 			s.probed[i] = true;
 			s.probedAt[i] = s.radius[i];
+			sampled |= bit;
 		}
 		return rays - budget;
 	}

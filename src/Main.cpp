@@ -2,6 +2,8 @@
 #include "Config.h"
 #include "Kills.h"
 #include "Pools.h"
+#include "Decals.h"
+#include "Rig.h"
 #include <windows.h>
 #include <cstdio>
 #include <cstring>
@@ -9,6 +11,16 @@
 namespace Pools {
 	static char s_iniPath[MAX_PATH];
 	static bool s_ready = false;
+	static FILE* s_log = nullptr;
+
+	static void LogProbes()
+	{
+		auto probes = Rig::TakeProbeStats();
+		auto picks = Decals::TakePickStats();
+		if (!s_log || (!probes.calls && !probes.reused && !picks.ground && !picks.visual)) return;
+		fprintf(s_log, "growth probes: calls=%llu reused=%llu deferred=%llu, engine picks: ground=%llu visual=%llu\n", probes.calls, probes.reused, probes.deferred, picks.ground, picks.visual);
+		fflush(s_log);
+	}
 
 	static void Message(NVSEMessagingInterface::Message* msg)
 	{
@@ -27,7 +39,10 @@ namespace Pools {
 			case NVSEMessagingInterface::ExitToMainMenu:
 			case NVSEMessagingInterface::PreLoadGame:
 			case NVSEMessagingInterface::PostLoadGame:
-			case NVSEMessagingInterface::NewGame: Corpses::Clear(); break;
+			case NVSEMessagingInterface::NewGame:
+				LogProbes();
+				Corpses::Clear();
+				break;
 		}
 	}
 
@@ -35,6 +50,12 @@ namespace Pools {
 	{
 		const char* runtime = nvse->GetRuntimeDirectory();
 		if (!runtime) return false;
+		char logPath[MAX_PATH];
+		if (sprintf_s(logPath, "%sBloodPoolsNVSE.log", runtime) >= 0) fopen_s(&s_log, logPath, "w");
+		if (s_log) {
+			fputs("BloodPoolsNVSE: growth-step probe reuse enabled\n", s_log);
+			fflush(s_log);
+		}
 		if (sprintf_s(s_iniPath, "%sData\\config\\BloodPoolsNVSE.ini", runtime) < 0) return false;
 		LoadConfig(s_iniPath);
 		auto messages = static_cast<NVSEMessagingInterface*>(nvse->QueryInterface(kInterface_Messaging));
