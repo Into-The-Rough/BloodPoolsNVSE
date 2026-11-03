@@ -14,7 +14,8 @@ namespace Pools::Kills {
 		bool main = GetCurrentThreadId() == s_mainThread;
 		bool watch = main && data && Engine::IsActor(target) && data->target == target && target->id != Engine::kPlayerRefID && Engine::LifeState(target) == 0;
 		reinterpret_cast<HitMe>(original)(target, data, flag);
-		if (!watch) return;
+		//a hit another plugin absorbed comes back with its damage zeroed
+		if (!watch || !(data->healthDamage > 0)) return;
 		//nested hits can queue the death first
 		for (int i = 0; i < s_count; ++i)
 			if (s_kills[i].target == target->id) {
