@@ -58,11 +58,6 @@ namespace Pools::Rig {
 	};
 
 	using Probe = Reading (*)(void* context, float x, float y, float& z);
-	struct ProbeStats {
-		uint64_t calls = 0, reused = 0, deferred = 0;
-	};
-
-	ProbeStats TakeProbeStats();
 	int Step(State& s, const Settings& settings, const Point* points, float dt, int rays, Probe probe, void* context);
 	bool Settled(const State& s);
 	void Write(const State& s, const Settings& settings, const Point* points, float lift, Vertex* vertices, UV* uvs, float* alpha);

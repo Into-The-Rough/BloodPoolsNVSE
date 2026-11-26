@@ -3,14 +3,6 @@
 
 namespace Pools::Rig {
 	constexpr float kPi = 3.14159265f;
-	static ProbeStats s_probeStats;
-
-	ProbeStats TakeProbeStats()
-	{
-		ProbeStats stats = s_probeStats;
-		s_probeStats = {};
-		return stats;
-	}
 
 	void Layout(Point* out)
 	{
@@ -179,15 +171,8 @@ namespace Pools::Rig {
 			if (sampled & bit) {
 				z = s.z[i];
 				reading = Reading::kGround;
-				++s_probeStats.reused;
-			} else {
-				++s_probeStats.calls;
-				reading = probe(context, x, y, z);
-			}
-			if (reading == Reading::kDeferred) {
-				++s_probeStats.deferred;
-				break;
-			}
+			} else reading = probe(context, x, y, z);
+			if (reading == Reading::kDeferred) break;
 			--budget;
 			s.cursor = i;
 			if (reading == Reading::kNone) {

@@ -72,6 +72,8 @@ namespace Pools::Corpses {
 
 	static void Admit(const Kills::Kill& kill)
 	{
+		for (int i = 0; i < s_count; ++i)
+			if (s_corpses[i].id == kill.target) return;
 		if (s_count >= kCapacity) return;
 		Corpse& c = s_corpses[s_count++];
 		c = {};
@@ -124,14 +126,15 @@ namespace Pools::Corpses {
 		return size;
 	}
 
-	static Decals::Cast Splatter(Form* actor, const Vec3& pos, float size)
+	static Decals::Cast Decal(Form* actor, Form* textureSet, const Vec3& pos, float size)
 	{
+		if (NoBloodDecal(actor) || IsRobot(actor)) return Decals::Cast::kMiss;
 		Decals::Request request;
 		request.corpse = actor;
 		request.pos = pos;
 		request.width = size * (.85f + .3f * Roll());
 		request.height = size * (.85f + .3f * Roll());
-		request.textureSet = s_splatter;
+		request.textureSet = textureSet;
 		request.colour = settings.colour;
 		request.lifetime = settings.lifetime;
 		request.yaw = Roll() * 6.2831853f;
@@ -154,10 +157,11 @@ namespace Pools::Corpses {
 
 	static bool PoolOrSplatter(Form* actor, const Vec3& at, float size, uint32_t salt, bool fallback)
 	{
+		if (!settings.pools) return Decals::CastsLeft() >= Decals::kGroundCasts && Decal(actor, s_pool, at, size) != Decals::Cast::kDeferred;
 		if (Decals::CastsLeft() < (fallback ? kFirstPoolCasts : kPoolCasts)) return false;
 		Decals::Cast spread = Spread(actor, at, size, salt);
 		if (spread == Decals::Cast::kDeferred) return false;
-		if (spread == Decals::Cast::kMiss && fallback) return Splatter(actor, at, size) != Decals::Cast::kDeferred;
+		if (spread == Decals::Cast::kMiss && fallback) return Decal(actor, s_pool, at, size) != Decals::Cast::kDeferred;
 		return true;
 	}
 
@@ -181,7 +185,7 @@ namespace Pools::Corpses {
 		return n;
 	}
 
-	constexpr float kMergeOverlap = .5f;
+	constexpr float kMergeOverlap = .5f, kPlaceTimeout = 2;
 
 	static void Settle(Form* actor, Object* root, Corpse& c)
 	{
@@ -190,6 +194,7 @@ namespace Pools::Corpses {
 		float size = BodySize(actor, root);
 		for (int i = 0; i < n; ++i) c.placements[i] = {sources[i].node->world.pos, size * sources[i].scale * .5f};
 		c.placementCount = n;
+		c.age = 0;
 		c.placing = true;
 	}
 
@@ -227,25 +232,25 @@ namespace Pools::Corpses {
 			Form* actor = Lookup(c.id);
 			Object* root = IsActor(actor) ? RefRoot(actor) : nullptr;
 			//robots can have the no-blood flag
-			if (!root || (NoBloodDecal(actor) && !IsRobot(actor)) || (player && Distance(RefPosition(actor), RefPosition(player)) > settings.maxDistance)) {
+			if (!root || !IsDeadState(LifeState(actor)) || (NoBloodDecal(actor) && !IsRobot(actor)) || (player && Distance(RefPosition(actor), RefPosition(player)) > settings.maxDistance)) {
 				Remove(i);
 				continue;
 			}
 			c.age += dt;
 			if (c.placing) {
-				if (PlaceNext(actor, c)) Remove(i);
+				if (PlaceNext(actor, c) || c.age >= kPlaceTimeout) Remove(i);
 				else ++i;
 				continue;
 			}
 			//blast decals use the same budget
-			if (c.explosion) {
+			if (c.explosion && !IsRobot(actor)) {
 				if (c.age < settings.explosionDelay) {
 					++i;
 					continue;
 				}
 				if (settings.explosions) {
 					float size = BodySize(actor, root) * settings.explosionScale;
-					if (Decals::CastsLeft() < Decals::kGroundCasts || Splatter(actor, RefPosition(actor), size) == Decals::Cast::kDeferred) {
+					if (Decals::CastsLeft() < Decals::kGroundCasts || Decal(actor, s_splatter, RefPosition(actor), size) == Decals::Cast::kDeferred) {
 						++i;
 						continue;
 					}

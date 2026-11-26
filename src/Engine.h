@@ -85,7 +85,10 @@ namespace Pools::Engine {
 	inline void AddRef(T* object) { _InterlockedIncrement(reinterpret_cast<volatile long*>(&object->references)); }
 
 	//zero refs delete through vtable slot 1
-	inline void Release(void* object) { reinterpret_cast<void(__thiscall*)(void*)>(0x401970)(object); }
+	inline void Release(void* object)
+	{
+		if (object) reinterpret_cast<void(__thiscall*)(void*)>(0x401970)(object);
+	}
 
 	inline void MarkAsChanged(GeometryData* data, uint16_t flags) { reinterpret_cast<void(__thiscall*)(GeometryData*, uint16_t)>(0xA67090)(data, flags); }
 

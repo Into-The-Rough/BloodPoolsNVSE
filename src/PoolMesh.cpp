@@ -144,7 +144,8 @@ namespace Pools::Mesh {
 		const char* path = fluid == Fluid::kOil ? "BloodPools\\oil01.nif" : fluid == Fluid::kGlow ? "BloodPools\\glow01.nif"
 																								  : kBloodMeshes[seed % kBloodVariants];
 		auto cell = static_cast<Form*>(CellAt(ground));
-		if (!cell || !CellAttached(cell)) return Decals::Cast::kDeferred;
+		if (!cell) return Decals::Cast::kMiss;
+		if (!CellAttached(cell)) return Decals::Cast::kDeferred;
 		Object* parent = CellNode(cell);
 		if (!parent) return Decals::Cast::kDeferred;
 		Vec3 origin = ground;
@@ -220,7 +221,7 @@ namespace Pools::Mesh {
 		float opacity = fade > 0 && p.age > lifetime - fade ? (lifetime - p.age) / fade : 1;
 		if (!p.done) {
 			ProbeContext context{&p, &disc->world};
-			Rig::Step(p.rig, p.settings, s_points, dt, settings.raysPerTick, Probe, &context);
+			Rig::Step(p.rig, p.settings, s_points, dt, settings.raysPerTick < 1 ? 1 : settings.raysPerTick, Probe, &context);
 		}
 		if (!p.done || opacity < 1) {
 			Rig::Vertex vertices[Rig::kVertices];

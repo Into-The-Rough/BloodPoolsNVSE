@@ -50,11 +50,8 @@ static void RepeatedProbe(const Point* points)
 	settings.duration = settings.creepSeconds = settings.lobes = 0;
 	Surface surface;
 	State s = GrowingVertex();
-	TakeProbeStats();
 	assert(Step(s, settings, points, .01f, 6, Sample, &surface) == 2);
 	assert(surface.calls == 1 && s.z[1] == 1 && s.probed[1] && !s.locked[1]);
-	auto stats = TakeProbeStats();
-	assert(stats.calls == 1 && stats.reused == 1 && stats.deferred == 0);
 	assert(!Settled(s));
 	surface.height = 2;
 	assert(Step(s, settings, points, .01f, 6, Sample, &surface) == 1);
